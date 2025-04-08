@@ -1,103 +1,146 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useRef, useState } from "react";
+import { Application } from "pixi.js";
+import { DonutChart } from "@/components/DonutChart";
+import { Slider } from "@/components/ui/slider";
+import { formatEuro } from "@/lib/utils";
+
+// Helper function to generate random data
+const generateRandomData = (
+  baseData: { id: string; value: number; color: number }[]
+) => {
+  return baseData.map((item) => ({
+    ...item,
+    value: Math.random() * 30,
+  }));
+};
+
+// Initial sample data for the chart
+const initialChartData = [
+  { id: "segment1", value: 30, color: 0x4f46e5 },
+  { id: "segment2", value: 50, color: 0x8b5cf6 },
+  { id: "segment3", value: 70, color: 0xa78bfa },
+  { id: "segment4", value: 40, color: 0xc4b5fd },
+];
+
+export default function Page() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const appRef = useRef<Application | null>(null);
+  const chartRef = useRef<DonutChart | null>(null);
+  const [value, setValue] = useState(5000000); // Default to 5 million euros
+  const [chartData, setChartData] = useState(initialChartData);
+
+  // Set up interval to update data regularly
+  useEffect(() => {
+    const dataUpdateInterval = setInterval(() => {
+      const newData = generateRandomData(chartData);
+      setChartData(newData);
+    }, 3000); // Update every 3 seconds
+
+    return () => clearInterval(dataUpdateInterval);
+  }, [chartData]);
+
+  // Update chart when data changes
+  useEffect(() => {
+    if (chartRef.current) {
+      chartRef.current.updateData(chartData);
+    }
+  }, [chartData]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Create and initialize the PixiJS application
+    const initializeApp = async () => {
+      // Create a new application
+      const app = new Application();
+
+      // Save width and height
+      const width = 600;
+      const height = 350;
+
+      // Initialize the application with desired configuration
+      await app.init({
+        width,
+        height,
+        antialias: true,
+        backgroundColor: 0xffffff,
+        backgroundAlpha: 0, // Make background transparent
+        resolution: window.devicePixelRatio || 1, // Improve antialiasing
+        autoDensity: true, // Improve rendering quality
+      });
+
+      // Append the canvas to the container
+      containerRef.current!.appendChild(app.canvas);
+
+      // Store reference to the app
+      appRef.current = app;
+
+      // Create the donut chart
+      const chart = new DonutChart(app, {
+        width,
+        height,
+        data: chartData,
+        innerRadius: 100,
+        outerRadius: 160,
+        popDistance: 15,
+        startAngle: -Math.PI, // Start from the left side (180 degrees)
+        endAngle: 0, // End at the right side (0 degrees)
+        euroValue: value, // Initial value
+      });
+
+      // Store reference to chart for cleanup
+      chartRef.current = chart;
+    };
+
+    initializeApp();
+
+    // Cleanup function
+    return () => {
+      if (chartRef.current) {
+        chartRef.current.destroy();
+        chartRef.current = null;
+      }
+
+      if (appRef.current) {
+        appRef.current.destroy();
+        appRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update the chart when value changes
+  useEffect(() => {
+    if (chartRef.current) {
+      chartRef.current.updateEuroValue(value);
+    }
+  }, [value]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+    <div className="flex flex-col items-center justify-center min-h-screen p-8 bg-white">
+      <div className="w-full max-w-md flex flex-col items-center">
+        {/* Chart container with dashed border */}
+        <div
+          ref={containerRef}
+          className="relative w-full h-[350px] flex items-center justify-center border-2 border-dashed border-slate-300 rounded-md p-4"
         />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+        {/* Slider component - placed with appropriate spacing */}
+        <div className="w-full px-4 mt-8">
+          <Slider
+            defaultValue={[value]}
+            max={10000000}
+            step={100000}
+            onValueChange={(vals) => setValue(vals[0])}
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="w-full flex justify-between mt-2 text-sm text-slate-500">
+          <span>€0</span>
+          <span>€10,000,000</span>
+        </div>
+      </div>
     </div>
   );
 }
