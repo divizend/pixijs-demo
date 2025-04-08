@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { Application } from "pixi.js";
 import { DonutChart } from "@/components/DonutChart";
 import { Slider } from "@/components/ui/slider";
-import { formatEuro } from "@/lib/utils";
 
 // Helper function to generate random data
 const generateRandomData = (
